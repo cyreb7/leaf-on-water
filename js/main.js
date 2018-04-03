@@ -213,8 +213,8 @@ LeafGame.Preloader.prototype = {
     // load a path to save us typing
     this.load.path = 'assets/img/';  
     // load image assets
-    this.load.images(['leaf', 'rock', 'particle', 'gameBackground', 'menuBackground'],
-                     ['leaf.png', 'rock.png', 'particle.png', 'background.png', 'menu-background.png']);
+    this.load.images(['leaf', 'rock1', 'rock2', 'rock3', 'rock4', 'particle', 'gameBackground', 'menuBackground'],
+                     ['leaf.png', 'rock/rock1.png', 'rock/rock2.png', 'rock/rock3.png', 'rock/rock4.png', 'particle.png', 'background.png', 'menu-background.png']);
     // Load animations
     this.load.atlas('wind', 'wind.png', 'wind.json');
     
@@ -700,7 +700,8 @@ LeafGame.Play.prototype = {
   createRock(x, y) {
     // Creates a rock obstacle
     // Add to world
-    var rock = this.rock.create(x, y, 'rock');
+    var randomRock = Math.ceil(Math.random() * 4.0);
+    var rock = this.rock.create(x, y, 'rock' + randomRock);
     rock.anchor.set(0.5, 0.5);
     this.physics.arcade.enable(rock);
     rock.body.immovable = true;
