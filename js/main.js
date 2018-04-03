@@ -1,8 +1,9 @@
 'use strict';
 
 // Globals
-var game = new Phaser.Game(360, 640, Phaser.AUTO, 'game');
+var game = new Phaser.Game(360, 640, Phaser.AUTO);
 var debug = false; //True to show debugging info
+var showWind = false; //
 var rng = new Phaser.RandomDataGenerator();
 var highScore = 0;
 var playerMaxVelocity = 200;
@@ -216,7 +217,9 @@ LeafGame.Preloader.prototype = {
     this.load.images(['leaf', 'rock1', 'rock2', 'rock3', 'rock4', 'particle', 'gameBackground', 'menuBackground'],
                      ['leaf.png', 'rock/rock1.png', 'rock/rock2.png', 'rock/rock3.png', 'rock/rock4.png', 'particle.png', 'background.png', 'menu-background.png']);
     // Load animations
-    this.load.atlas('wind', 'wind.png', 'wind.json');
+    if (showWind) {
+      this.load.atlas('wind', 'wind.png', 'wind.json');
+    }
     
     // Load vector fields
     this.load.path = 'assets/img/vectorFields/'; 
@@ -230,8 +233,9 @@ LeafGame.Preloader.prototype = {
     // https://opengameart.org/content/ambient-mountain-river-wind-and-forest-and-waterfall
     this.load.audio('river', ['amb_river.mp3', 'amb_river.ogg']);
     this.load.audio('stream', ['amb_stream.mp3', 'amb_stream.ogg']);
-    // https://c418.bandcamp.com/track/wooden-love
-    this.load.audio('music', ['wooden_love.mp3', 'wooden_love.ogg']);
+    this.load.audio('drop', ['LiquidWaterDropSingle09.mp3', 'LiquidWaterDropSingle09.ogg']);
+    // https://lifeformed.bandcamp.com/track/breadtime
+    this.load.audio('music', ['breadtime.mp3', 'breadtime.ogg']);
   },
   create: function() {
     console.log('Preloader: create');
@@ -255,8 +259,10 @@ LeafGame.Menu = function() {
   this.leaf = null;
   this.text = [];
   this.transitionStarted = null;
+  this.dropFX = null;
   this.streamFX = null;
   this.riverFX = null;
+  this.dropPlayed = false;
   
   // Settings
   this.gravity = 100;
@@ -302,7 +308,7 @@ LeafGame.Menu.prototype = {
                   {font: 'bold 3em Georgia', boundsAlignH: 'center', fill: "white"});
     this.text[0].setTextBounds(0, Helper.relativeY(0.1), this.world.width);
     
-    this.text[1] = this.add.text(0, 0, 'Press spacebar to start', 
+    this.text[1] = this.add.text(0, 0, 'Press enter to start', 
                   {font: '2.5em Verdana', boundsAlignH: 'center'});
     this.text[1].setTextBounds(0, Helper.relativeY(0.5), this.world.width);
     
@@ -315,9 +321,10 @@ LeafGame.Menu.prototype = {
     this.text[3].setTextBounds(0, Helper.getTextYBottom(this.text[2]), this.world.width);
     
     // Input
-    this.inputSpace = this.input.keyboard.addKey(Phaser.KeyCode.SPACEBAR);
+    this.inputSpace = this.input.keyboard.addKey(Phaser.KeyCode.ENTER);
     
     // Audio
+    this.dropFX = this.add.audio('drop');
     this.streamFX = this.add.audio('stream');
     this.streamFX.play('', 0, 0.35, true); // ('marker', start position, volume (0-1), loop)
     this.riverFX = this.add.audio('river');
@@ -325,10 +332,20 @@ LeafGame.Menu.prototype = {
   },
   update: function() {
     // Check if player falling
-    if (this.leaf.y > Helper.relativeY(0.875) - game.world.height / 4) {
-      this.leaf.body.gravity.y = -this.gravity * 2;
+    if (this.leaf.y > Helper.relativeY(1.0) - game.world.height / 4) {
+      this.leaf.body.gravity.y = 0.0;
       this.leaf.body.gravity.x = -this.gravity;
       this.riverFX.fadeTo(100, 0.6);
+    }
+    
+    // Play SFX when at appropriate height for leaf falling into water
+    if (!this.dropPlayed && (this.leaf.y > Helper.relativeY(1.0) - game.world.height / 4)) {
+      this.dropFX.play('', 0, 1.0, false);
+      this.dropPlayed = true;
+      
+      // Set velocity to appear as if it fell into water
+      this.leaf.body.velocity.y = 0.0;
+      this.leaf.body.velocity.x = -25.0;
     }
     
     // Switch state when player off side of screen
@@ -361,7 +378,6 @@ LeafGame.Menu.prototype = {
         // Start leaf falling
         this.leaf.body.gravity.y = this.gravity;
         this.leaf.body.velocity.y = this.initialVelocity;
-        this.isFalling = true;
       } else {
         // Skip transition
         this.toPlay();
@@ -413,8 +429,8 @@ LeafGame.Play = function() {
   // Player
   this.playerAcceleration = this.maxWaterAcceleration * 0.75;
   this.playerMaxVelocity = playerMaxVelocity;
-  this.playerStartingVelocity = 20;
-  this.playerRapidsStartingVelocity = 65;
+  this.playerRapidsStartingVelocityIncrese = 10;
+  this.playerRapidsStartingVelocity = 65 - this.playerRapidsStartingVelocityIncrese;
   // General
   this.startTimerLength = 5; //In seconds
   this.numberOfRocks = 7;
@@ -465,20 +481,22 @@ LeafGame.Play.prototype = {
     this.painter.init();
     
     // Wind emitter
-    this.wind = game.add.emitter(0, Helper.relativeY(0.5), 50);
-    this.wind.height = game.world.height;
-    this.wind.width = Helper.relativeX(0.5);
-    this.wind.setYSpeed(0, 0);
-    this.wind.setRotation(0,0);
-    this.wind.gravity.set(0, 0);
-    this.wind.makeParticles('wind');
-    this.wind.flow(this.windParticleLifespan, this.windParticleFrequency, 1, -1, false);
-    this.wind.on = false;
-    this.wind.forEach(function(particle) {
-      // Attach animation
-      particle.animations.add('windAnimation');
-      particle.animations.play('windAnimation', 10, true);
-    });
+    if (showWind) {
+      this.wind = game.add.emitter(0, Helper.relativeY(0.5), 50);
+      this.wind.height = game.world.height;
+      this.wind.width = Helper.relativeX(0.5);
+      this.wind.setYSpeed(0, 0);
+      this.wind.setRotation(0,0);
+      this.wind.gravity.set(0, 0);
+      this.wind.makeParticles('wind');
+      this.wind.flow(this.windParticleLifespan, this.windParticleFrequency, 1, -1, false);
+      this.wind.on = false;
+      this.wind.forEach(function(particle) {
+        // Attach animation
+        particle.animations.add('windAnimation');
+        particle.animations.play('windAnimation', 10, true);
+      });
+    }
     
     // Setup vector field
     this.vf.reset(this.maxWaterAcceleration);
@@ -513,7 +531,7 @@ LeafGame.Play.prototype = {
     if (!audioBG) {
       // Start audio
       audioBG = this.add.audio('music');
-      this.bgMusic = audioBG
+      this.bgMusic = audioBG;
       this.bgMusic.play("", 0, 0.35, true); // ('marker', start position, volume (0-1), loop)
     } else {
       // Continue audio
@@ -522,7 +540,7 @@ LeafGame.Play.prototype = {
     
     // Input
     this.cursors = this.input.keyboard.createCursorKeys();
-    this.inputSpace = this.input.keyboard.addKey(Phaser.KeyCode.SPACEBAR);
+    this.inputSpace = this.input.keyboard.addKey(Phaser.KeyCode.ENTER);
     
     // Generate first set of water
     if (highScore > 0) {
@@ -533,6 +551,9 @@ LeafGame.Play.prototype = {
     }
   },
   newRapids: function() {
+    // Make speed faster
+    this.playerRapidsStartingVelocity += this.playerRapidsStartingVelocityIncrese;
+    
     // Generates a new set of rapids
     this.status['location'] = 'rapids';
     this.resetWater();
@@ -592,7 +613,9 @@ LeafGame.Play.prototype = {
   },
   update: function() {
     // Disable emitters
-    this.wind.on = false;
+    if (showWind) {
+      this.wind.on = false;
+    }
     
     // If off top
     if (this.leaf.y < -this.leaf.height
@@ -661,7 +684,7 @@ LeafGame.Play.prototype = {
       
       // Show timer text
       var remaining = Math.round(this.status.startTimer.duration / 1000);
-      this.leafText.setText('Approaching rapids in');
+      this.leafText.setText('Approaching rapids');
       this.leafNumber.setText(remaining);
     }
     
@@ -701,7 +724,7 @@ LeafGame.Play.prototype = {
     // Creates a rock obstacle
     // Add to world
     var randomRock = Math.ceil(Math.random() * 4.0);
-    var rock = this.rock.create(x, y, 'rock' + randomRock);
+    var rock = this.rock.create(x, y, 'rock'+randomRock);
     rock.anchor.set(0.5, 0.5);
     this.physics.arcade.enable(rock);
     rock.body.immovable = true;
@@ -743,23 +766,25 @@ LeafGame.Play.prototype = {
     this.painter.resetEmitter();
   },
   makeWind(x) {
-    // Generates the wind particles and sound
     if (!this.windFX.isPlaying) {
       // Play sound
       this.windFX.play('', 0, 0.7);
     }
-    
-    // Set emitter settings
-    var xSpeed = -this.windParticleSpawnSpeed;
-    var offset = -this.wind.width / 2;
-    if (x <= 0) {
-      xSpeed = this.windParticleSpawnSpeed;
-      offset = this.wind.width / 2;
+    if (showWind) {
+      // Generates the wind particles and sound
+      
+      // Set emitter settings
+      var xSpeed = -this.windParticleSpawnSpeed;
+      var offset = -this.wind.width / 2;
+      if (x <= 0) {
+        xSpeed = this.windParticleSpawnSpeed;
+        offset = this.wind.width / 2;
+      }
+      this.wind.setXSpeed(xSpeed - this.windParticleSpawnRange, xSpeed + this.windParticleSpawnRange);
+      this.wind.x = x + offset;
+      // Enable emitter
+      this.wind.on = true;
     }
-    this.wind.setXSpeed(xSpeed - this.windParticleSpawnRange, xSpeed + this.windParticleSpawnRange);
-    this.wind.x = x + offset;
-    // Enable emitter
-    this.wind.on = true;
   }
 };
 
