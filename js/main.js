@@ -279,6 +279,7 @@ LeafGame.Menu.prototype = {
     
     // Settings
     this.transitionStarted = false;
+    this.dropPlayed = false;
     
     // Background
     this.bg = new ParticlePainter;
@@ -430,7 +431,7 @@ LeafGame.Play = function() {
   this.playerAcceleration = this.maxWaterAcceleration * 0.75;
   this.playerMaxVelocity = playerMaxVelocity;
   this.playerRapidsStartingVelocityIncrese = 10;
-  this.playerRapidsStartingVelocity = 65 - this.playerRapidsStartingVelocityIncrese;
+  this.playerRapidsStartingVelocity;
   // General
   this.startTimerLength = 5; //In seconds
   this.numberOfRocks = 7;
@@ -459,6 +460,9 @@ LeafGame.Play = function() {
 LeafGame.Play.prototype = {
   create: function() {
     console.log('Play: create');
+    
+    // Settings
+    this.playerRapidsStartingVelocity = 65 - this.playerRapidsStartingVelocityIncrese;
     
     // Flags
     if (highScore == 0) {
@@ -553,6 +557,7 @@ LeafGame.Play.prototype = {
   newRapids: function() {
     // Make speed faster
     this.playerRapidsStartingVelocity += this.playerRapidsStartingVelocityIncrese;
+    console.log(this.playerRapidsStartingVelocity);
     
     // Generates a new set of rapids
     this.status['location'] = 'rapids';
