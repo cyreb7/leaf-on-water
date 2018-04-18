@@ -34,7 +34,7 @@ var Helper ={
 var ParticlePainter = function() {
   this.bg = null;
   this.emitter = null
-  this.waterParticleSize = 5;
+  this.waterParticleSize = 20;
   this.waterParticleLifespan = 10000;
   this.waterParticleFrequency = 1;
 }
