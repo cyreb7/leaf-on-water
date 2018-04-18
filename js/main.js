@@ -1,7 +1,7 @@
 'use strict';
 
 // Globals
-var game = new Phaser.Game(360, 640, Phaser.AUTO);
+var game = new Phaser.Game(396, 1584, Phaser.AUTO, null, null, true);
 var debug = false; //True to show debugging info
 var showWind = false; //
 var rng = new Phaser.RandomDataGenerator();
@@ -36,7 +36,7 @@ var ParticlePainter = function() {
   this.emitter = null
   this.waterParticleSize = 5;
   this.waterParticleLifespan = 10000;
-  this.waterParticleFrequency = 200;
+  this.waterParticleFrequency = 1;
 }
 ParticlePainter.prototype = {
   init: function(backgroundImage) {
@@ -46,7 +46,7 @@ ParticlePainter.prototype = {
     this.bg.addToWorld(0, 0);
     
     // Emitter
-    this.emitter = game.add.emitter(Helper.relativeX(0.5), Helper.relativeY(1), 100);
+    this.emitter = game.add.emitter(Helper.relativeX(0.5), Helper.relativeY(1), 1000);
     this.emitter.width = game.world.width;
     // Emitter physics
     this.emitter.enableBody = true;
@@ -65,6 +65,7 @@ ParticlePainter.prototype = {
     });
   },
   update: function(passedFunction, context) {
+    
     // Update particles
     this.emitter.forEachAlive(function(particle) {
       // Call the passed function on each particle
@@ -85,8 +86,9 @@ ParticlePainter.prototype = {
   },
   clearBitmap: function() {
     // Resets the contents of the bitmap
-    this.bg.fill(255, 255, 255, 1);
-    this.bg.draw(game.cache.getImage('gameBackground'), 0, 0);
+    this.bg.fill(255, 255, 255, 0);
+    // this.bg.clear();
+    // this.bg.draw(game.cache.getImage('gameBackground'), 0, 0);
   },
   clearParticles: function() {
     // Kill all particles
@@ -139,7 +141,7 @@ VectorField.prototype = {
     // Set blend mode
     this.field.blendScreen();
     // Draw image
-    this.field.draw(imageObj, x, y);
+    this.field.draw(imageObj, 0, 0, game.width, game.height);
     // Update canvas
     this.field.update();
   },
@@ -214,8 +216,8 @@ LeafGame.Preloader.prototype = {
     // load a path to save us typing
     this.load.path = 'assets/img/';  
     // load image assets
-    this.load.images(['leaf', 'rock1', 'rock2', 'rock3', 'rock4', 'particle', 'gameBackground', 'menuBackground'],
-                     ['leaf.png', 'rock/rock1.png', 'rock/rock2.png', 'rock/rock3.png', 'rock/rock4.png', 'particle.png', 'background.png', 'menu-background.png']);
+    this.load.images(['leaf', 'rock', 'particle', 'gameBackground', 'menuBackground'],
+                     ['leaf.png', 'rock.png', 'particle.png', 'background.png', 'menu-background.png']);
     // Load animations
     if (showWind) {
       this.load.atlas('wind', 'wind.png', 'wind.json');
@@ -230,6 +232,8 @@ LeafGame.Preloader.prototype = {
     this.load.path = 'assets/audio/';
     // https://www.freesound.org/people/vandale/sounds/379464/
     this.load.audio('wind', ['wind1.mp3', 'wind1.ogg']);
+    if (showWind) {
+    }
     // https://opengameart.org/content/ambient-mountain-river-wind-and-forest-and-waterfall
     this.load.audio('river', ['amb_river.mp3', 'amb_river.ogg']);
     this.load.audio('stream', ['amb_stream.mp3', 'amb_stream.ogg']);
@@ -279,7 +283,6 @@ LeafGame.Menu.prototype = {
     
     // Settings
     this.transitionStarted = false;
-    this.dropPlayed = false;
     
     // Background
     this.bg = new ParticlePainter;
@@ -330,11 +333,14 @@ LeafGame.Menu.prototype = {
     this.streamFX.play('', 0, 0.35, true); // ('marker', start position, volume (0-1), loop)
     this.riverFX = this.add.audio('river');
     this.riverFX.play('', 0, 0, true); // ('marker', start position, volume (0-1), loop)
+    
+    // Skip
+    this.toPlay();
   },
   update: function() {
     // Check if player falling
-    if (this.leaf.y > Helper.relativeY(1.0) - game.world.height / 4) {
-      this.leaf.body.gravity.y = 0.0;
+    if (this.leaf.y > Helper.relativeY(0.875) - game.world.height / 4) {
+      this.leaf.body.gravity.y = -this.gravity * 2;
       this.leaf.body.gravity.x = -this.gravity;
       this.riverFX.fadeTo(100, 0.6);
     }
@@ -343,10 +349,6 @@ LeafGame.Menu.prototype = {
     if (!this.dropPlayed && (this.leaf.y > Helper.relativeY(1.0) - game.world.height / 4)) {
       this.dropFX.play('', 0, 1.0, false);
       this.dropPlayed = true;
-      
-      // Set velocity to appear as if it fell into water
-      this.leaf.body.velocity.y = 0.0;
-      this.leaf.body.velocity.x = -25.0;
     }
     
     // Switch state when player off side of screen
@@ -431,7 +433,7 @@ LeafGame.Play = function() {
   this.playerAcceleration = this.maxWaterAcceleration * 0.75;
   this.playerMaxVelocity = playerMaxVelocity;
   this.playerRapidsStartingVelocityIncrese = 10;
-  this.playerRapidsStartingVelocity;
+  this.playerRapidsStartingVelocity = 65 - this.playerRapidsStartingVelocityIncrese;
   // General
   this.startTimerLength = 5; //In seconds
   this.numberOfRocks = 7;
@@ -460,9 +462,6 @@ LeafGame.Play = function() {
 LeafGame.Play.prototype = {
   create: function() {
     console.log('Play: create');
-    
-    // Settings
-    this.playerRapidsStartingVelocity = 65 - this.playerRapidsStartingVelocityIncrese;
     
     // Flags
     if (highScore == 0) {
@@ -536,7 +535,7 @@ LeafGame.Play.prototype = {
       // Start audio
       audioBG = this.add.audio('music');
       this.bgMusic = audioBG;
-      this.bgMusic.play("", 0, 0.35, true); // ('marker', start position, volume (0-1), loop)
+      // this.bgMusic.play("", 0, 0.35, true); // ('marker', start position, volume (0-1), loop)
     } else {
       // Continue audio
       audioBG.resume();
@@ -544,12 +543,12 @@ LeafGame.Play.prototype = {
     
     // Input
     this.cursors = this.input.keyboard.createCursorKeys();
-    this.inputSpace = this.input.keyboard.addKey(Phaser.KeyCode.ENTER);
+    this.inputSpace = this.input.keyboard.addKey(Phaser.KeyCode.SPACEBAR);
     
     // Generate first set of water
     if (highScore > 0) {
       // If already played, start at rapids
-      this.newRapids();
+      // this.newRapids();
     } else {
       this.newCalm();
     }
@@ -557,7 +556,6 @@ LeafGame.Play.prototype = {
   newRapids: function() {
     // Make speed faster
     this.playerRapidsStartingVelocity += this.playerRapidsStartingVelocityIncrese;
-    console.log(this.playerRapidsStartingVelocity);
     
     // Generates a new set of rapids
     this.status['location'] = 'rapids';
@@ -585,7 +583,7 @@ LeafGame.Play.prototype = {
     }
     
     // Emitter settings
-    this.painter.emitter.height = 1;
+    // this.painter.emitter.height = 1;
     this.painter.emitter.on = true;
     
     // Start timer
@@ -617,53 +615,63 @@ LeafGame.Play.prototype = {
     this.leaf.y = this.world.height - (this.leaf.height / 2);
   },
   update: function() {
+    // Disable player off bottom
+    this.leaf.x = this.world.width/2;
+    this.leaf.y = 10000000000;
+    
     // Disable emitters
     if (showWind) {
       this.wind.on = false;
     }
     
     // If off top
-    if (this.leaf.y < -this.leaf.height
-        || debug && this.cursors.up.justPressed()) {
-      // Generate new set of water
-      if (this.status['location'] == 'calm') {
-        this.newRapids();
-      } else if (this.status['location'] == 'rapids') {
-        this.status.rapidsCleared++;
-        this.newCalm();
-      }
-    }
+    // if (this.leaf.y < -this.leaf.height
+    //     || debug && this.cursors.up.justPressed()) {
+    //   // Generate new set of water
+    //   if (this.status['location'] == 'calm') {
+    //     this.newRapids();
+    //   } else if (this.status['location'] == 'rapids') {
+    //     this.status.rapidsCleared++;
+    //     this.newCalm();
+    //   }
+    // }
     
     // If off sides
-    if (this.leaf.x > this.world.width - this.leaf.width/2
-        || this.leaf.x < 0 - this.leaf.width/2) {
-      this.toMenu();
-    }
+    // if (this.leaf.x > this.world.width - this.leaf.width/2
+    //     || this.leaf.x < 0 - this.leaf.width/2) {
+    //   this.toMenu();
+    // }
     
     // Press space to skip rapids timer
-    if (this.inputSpace.justPressed() && this.status.startTimer.running) {
-      if (this.status.location == 'rapids') {
-        // Get the timer event and call its callback
-        this.status.startTimer.events[0].callback.call(this.status.startTimer.events[0].callbackContext);
-      }
+    // if (this.inputSpace.justPressed() && this.status.startTimer.running) {
+    //   if (this.status.location == 'rapids') {
+    //     // Get the timer event and call its callback
+    //     this.status.startTimer.events[0].callback.call(this.status.startTimer.events[0].callbackContext);
+    //   }
+    // }
+    
+    // Disable emitter
+    if (this.inputSpace.justPressed()) {
+      this.painter.emitter.on = false;
+      console.log("Stopped emitter");
     }
     
-    // Player movement
-    // Set acceleration from input
-    if (this.cursors.left.isDown) {
-      // Go left
-      this.status.windAcceleration = -this.playerAcceleration;
-      this.makeWind(this.world.width);
-    }
-    if (this.cursors.right.isDown) {
-      // Go right
-      this.status.windAcceleration = this.playerAcceleration;
-      this.makeWind(0);
-    }
-    if (this.cursors.right.isUp && this.cursors.left.isUp) {
-      // Do not change course
-      this.status.windAcceleration = 0;
-    }
+    // // Player movement
+    // // Set acceleration from input
+    // if (this.cursors.left.isDown) {
+    //   // Go left
+    //   this.status.windAcceleration = -this.playerAcceleration;
+    //   this.makeWind(this.world.width);
+    // }
+    // if (this.cursors.right.isDown) {
+    //   // Go right
+    //   this.status.windAcceleration = this.playerAcceleration;
+    //   this.makeWind(0);
+    // }
+    // if (this.cursors.right.isUp && this.cursors.left.isUp) {
+    //   // Do not change course
+    //   this.status.windAcceleration = 0;
+    // }
     
     // Update particles
     this.painter.update(function(particle) {
@@ -671,33 +679,35 @@ LeafGame.Play.prototype = {
       this.setWaterAcceleration(particle);
       this.setMaxSpeed(particle, this.playerMaxVelocity);
     }, this);
+    // for (var i = 0; i < 100; i++) {
+    // }
     
     // Paint player to the background
-    this.painter.paintCircle(this.leaf.x + this.leaf.width / 2, this.leaf.y + this.leaf.height / 2, this.leaf.width / 2,
-                   this.leafPaintColor.rgba);
+    // this.painter.paintCircle(this.leaf.x + this.leaf.width / 2, this.leaf.y + this.leaf.height / 2, this.leaf.width / 2,
+    //                this.leafPaintColor.rgba);
     
     // Move player sprite
-    this.setWaterAcceleration(this.leaf);
-    this.setMaxSpeed(this.leaf, this.playerMaxVelocity);
+    // this.setWaterAcceleration(this.leaf);
+    // this.setMaxSpeed(this.leaf, this.playerMaxVelocity);
     
-    // Update leaf indicator
-    if (this.status.startTimer.running
-          && this.status.location == 'rapids') {
-      // Force leaf off screen
-      this.leaf.x = Helper.relativeX(0.5);
-      this.leaf.y = this.world.height;
+    // // Update leaf indicator
+    // if (this.status.startTimer.running
+    //       && this.status.location == 'rapids') {
+    //   // Force leaf off screen
+    //   this.leaf.x = Helper.relativeX(0.5);
+    //   this.leaf.y = this.world.height;
       
-      // Show timer text
-      var remaining = Math.round(this.status.startTimer.duration / 1000);
-      this.leafText.setText('Approaching rapids');
-      this.leafNumber.setText(remaining);
-    }
+    //   // Show timer text
+    //   var remaining = Math.round(this.status.startTimer.duration / 1000);
+    //   this.leafText.setText('Approaching rapids');
+    //   this.leafNumber.setText(remaining);
+    // }
     
-    // Collision checking
-    // If the player hits a rock
-    if (this.physics.arcade.collide(this.leaf, this.rock)) {
-      this.toMenu();
-    }
+    // // Collision checking
+    // // If the player hits a rock
+    // if (this.physics.arcade.collide(this.leaf, this.rock)) {
+    //   this.toMenu();
+    // }
   },
   toMenu: function() {
     // Back to the main menu
@@ -728,8 +738,7 @@ LeafGame.Play.prototype = {
   createRock(x, y) {
     // Creates a rock obstacle
     // Add to world
-    var randomRock = Math.ceil(Math.random() * 4.0);
-    var rock = this.rock.create(x, y, 'rock'+randomRock);
+    var rock = this.rock.create(x, y, 'rock');
     rock.anchor.set(0.5, 0.5);
     this.physics.arcade.enable(rock);
     rock.body.immovable = true;
@@ -773,7 +782,7 @@ LeafGame.Play.prototype = {
   makeWind(x) {
     if (!this.windFX.isPlaying) {
       // Play sound
-      this.windFX.play('', 0, 0.7);
+      // this.windFX.play('', 0, 0.7);
     }
     if (showWind) {
       // Generates the wind particles and sound
