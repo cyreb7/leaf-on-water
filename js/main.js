@@ -3,7 +3,6 @@
 // Globals
 var game = new Phaser.Game(360, 640, Phaser.AUTO);
 var debug = false; //True to show debugging info
-var showWind = false; //
 var rng = new Phaser.RandomDataGenerator();
 var highScore = 0;
 var playerMaxVelocity = 200;
@@ -216,10 +215,6 @@ LeafGame.Preloader.prototype = {
     // load image assets
     this.load.images(['leaf', 'rock1', 'rock2', 'rock3', 'rock4', 'particle', 'gameBackground', 'menuBackground'],
                      ['leaf.png', 'rock/rock1.png', 'rock/rock2.png', 'rock/rock3.png', 'rock/rock4.png', 'particle.png', 'background.png', 'menu-background.png']);
-    // Load animations
-    if (showWind) {
-      this.load.atlas('wind', 'wind.png', 'wind.json');
-    }
     
     // Load vector fields
     this.load.path = 'assets/img/vectorFields/'; 
@@ -228,8 +223,6 @@ LeafGame.Preloader.prototype = {
 
     // load audio
     this.load.path = 'assets/audio/';
-    // https://www.freesound.org/people/vandale/sounds/379464/
-    this.load.audio('wind', ['wind1.mp3', 'wind1.ogg']);
     // https://opengameart.org/content/ambient-mountain-river-wind-and-forest-and-waterfall
     this.load.audio('river', ['amb_river.mp3', 'amb_river.ogg']);
     this.load.audio('stream', ['amb_stream.mp3', 'amb_stream.ogg']);
@@ -408,7 +401,6 @@ LeafGame.Play = function() {
   this.rock = null;
   this.waterEmitter = null;
   this.painter = null;
-  this.wind = null;
   this.bg = null;
   // Text
   this.leafText = null;
@@ -418,7 +410,6 @@ LeafGame.Play = function() {
   this.inputSpace = null;
   // Audio
   this.bgMusic = null;
-  this.windFX = null;
   this.bgMusic = null;
   this.riverFX = null;
   this.vf = new VectorField();
@@ -441,10 +432,6 @@ LeafGame.Play = function() {
   this.rockSpawnMaxY = 0.7; //In percentage
   this.rockSpawnRange = 0.05; //In percentage
   this.rockSpawnXPadding = 0.05; //In percentage
-  this.windParticleLifespan = 2000; // In ms
-  this.windParticleFrequency = 750; // In ms
-  this.windParticleSpawnSpeed = 75; // In px
-  this.windParticleSpawnRange = 10; // In px
   
   // Gameplay flags
   this.status = {
@@ -484,24 +471,6 @@ LeafGame.Play.prototype = {
     this.painter = new ParticlePainter;
     this.painter.init();
     
-    // Wind emitter
-    if (showWind) {
-      this.wind = game.add.emitter(0, Helper.relativeY(0.5), 50);
-      this.wind.height = game.world.height;
-      this.wind.width = Helper.relativeX(0.5);
-      this.wind.setYSpeed(0, 0);
-      this.wind.setRotation(0,0);
-      this.wind.gravity.set(0, 0);
-      this.wind.makeParticles('wind');
-      this.wind.flow(this.windParticleLifespan, this.windParticleFrequency, 1, -1, false);
-      this.wind.on = false;
-      this.wind.forEach(function(particle) {
-        // Attach animation
-        particle.animations.add('windAnimation');
-        particle.animations.play('windAnimation', 10, true);
-      });
-    }
-    
     // Setup vector field
     this.vf.reset(this.maxWaterAcceleration);
     if (debug) {
@@ -529,7 +498,6 @@ LeafGame.Play.prototype = {
     this.leaf.body.setCircle(this.leaf.width/2);
     
     // Audio
-    this.windFX = this.add.audio('wind');
     this.riverFX = audio;
     this.riverFX.fadeTo(100, 0.6);
     if (!audioBG) {
@@ -617,11 +585,6 @@ LeafGame.Play.prototype = {
     this.leaf.y = this.world.height - (this.leaf.height / 2);
   },
   update: function() {
-    // Disable emitters
-    if (showWind) {
-      this.wind.on = false;
-    }
-    
     // If off top
     if (this.leaf.y < -this.leaf.height
         || debug && this.cursors.up.justPressed()) {
@@ -653,12 +616,10 @@ LeafGame.Play.prototype = {
     if (this.cursors.left.isDown) {
       // Go left
       this.status.windAcceleration = -this.playerAcceleration;
-      this.makeWind(this.world.width);
     }
     if (this.cursors.right.isDown) {
       // Go right
       this.status.windAcceleration = this.playerAcceleration;
-      this.makeWind(0);
     }
     if (this.cursors.right.isUp && this.cursors.left.isUp) {
       // Do not change course
@@ -704,7 +665,6 @@ LeafGame.Play.prototype = {
     highScore = Math.max(highScore, this.status.rapidsCleared);
     
     // Stop audio
-    this.windFX.stop();
     this.riverFX.stop();
     this.bgMusic.pause(); // Pause so we can resume from same place
     
@@ -769,27 +729,6 @@ LeafGame.Play.prototype = {
     this.painter.clearParticles();
     this.painter.clearBitmap();
     this.painter.resetEmitter();
-  },
-  makeWind(x) {
-    if (!this.windFX.isPlaying) {
-      // Play sound
-      this.windFX.play('', 0, 0.7);
-    }
-    if (showWind) {
-      // Generates the wind particles and sound
-      
-      // Set emitter settings
-      var xSpeed = -this.windParticleSpawnSpeed;
-      var offset = -this.wind.width / 2;
-      if (x <= 0) {
-        xSpeed = this.windParticleSpawnSpeed;
-        offset = this.wind.width / 2;
-      }
-      this.wind.setXSpeed(xSpeed - this.windParticleSpawnRange, xSpeed + this.windParticleSpawnRange);
-      this.wind.x = x + offset;
-      // Enable emitter
-      this.wind.on = true;
-    }
   }
 };
 
