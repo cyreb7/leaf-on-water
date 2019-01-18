@@ -1,19 +1,24 @@
 'use strict';
 
-// Globals
+
+/*  Globals  */
+
+// Objects
 var game = new Phaser.Game(360, 640, Phaser.AUTO);
-var debug = false; //True to show debugging info
 var rng = new Phaser.RandomDataGenerator();
-var highScore = 0;
-var playerMaxVelocity = 200;
-var leafPaintColor = Phaser.Color.hexToColor('95b6ea');
 var audio = null;
 var audioBG = null;
-
+// Settings
+var debug = false; //True to show debugging info
+var playerMaxVelocity = 200;
+var highScore = 0;
+var leafPaintColor = Phaser.Color.hexToColor('95b6ea');
 // Main game
 var LeafGame = {};
 
-// Helper functions
+
+/*  Helper functions  */
+
 var Helper ={
   relativeX: function(x) {
     // Returns the x-coordinate of the canvas based on the passed percentage
@@ -28,6 +33,9 @@ var Helper ={
     return text.textBounds.y + text.bottom;
   }
 }
+
+
+/*  Objects  */
 
 // Manages a BitmapData and paints onto it with particles
 var ParticlePainter = function() {
@@ -143,7 +151,7 @@ VectorField.prototype = {
     this.field.update();
   },
   toWorld: function(x, y) {
-    // Adds vector field  bitmap to the game at location x, y
+    // Adds vector field bitmap to the game at location x, y
     this.field.addToWorld(x, y);
   },
   getVector: function(x, y) {
@@ -175,6 +183,9 @@ VectorField.prototype = {
     return vector;
   }
 }
+
+
+/*  Game states  */
 
 // Prepare for preload
 LeafGame.Boot = function(){};
@@ -264,11 +275,6 @@ LeafGame.Menu = function() {
 LeafGame.Menu.prototype = {
   create: function() {
     console.log('Menu: create');
-    
-    // enable FPS monitoring
-    if (debug) {
-      game.time.advancedTiming = true;
-    }
     
     // Settings
     this.transitionStarted = false;
@@ -395,7 +401,8 @@ LeafGame.Menu.prototype = {
 
 // Play state
 LeafGame.Play = function() {
-  // References
+  /*  References  */
+  
   // Sprites
   this.leaf = null;
   this.rock = null;
@@ -414,7 +421,9 @@ LeafGame.Play = function() {
   this.riverFX = null;
   this.vf = new VectorField();
   
-  // Gameplay values
+  
+  /*  Gameplay values  */
+  
   // Water
   this.flowAcceleration = 15;
   this.maxWaterAcceleration = 75;
@@ -440,9 +449,6 @@ LeafGame.Play = function() {
     rapidsCleared: null,
     windAcceleration: null
   };
-  
-  // Visual settings
-  this.leafPaintColor = leafPaintColor;
 };
 LeafGame.Play.prototype = {
   create: function() {
@@ -451,7 +457,7 @@ LeafGame.Play.prototype = {
     // Settings
     this.playerRapidsStartingVelocity = 65 - this.playerRapidsStartingVelocityIncrese;
     
-    // Flags
+    // Initialize settings
     if (highScore == 0) {
       this.status.location = 'calm';
     } else {
@@ -490,7 +496,7 @@ LeafGame.Play.prototype = {
     this.leafText.setTextBounds(0, Helper.relativeY(0.75), game.width, Helper.relativeY(0.25));
     
     this.leafNumber = this.add.text(0, 0, '', 
-                  {font: '3em Verdana', boundsAlignH: 'center'});
+                    {font: '3em Verdana', boundsAlignH: 'center'});
     this.leafNumber.setTextBounds(0, Helper.getTextYBottom(this.leafText), this.world.width);
     
     // Physics
@@ -522,10 +528,18 @@ LeafGame.Play.prototype = {
       this.newCalm();
     }
   },
+  
+  
+  /*  Generate river sections  */
+  
   newRapids: function() {
+    // Changes board state to rapids
+    
     // Make speed faster
     this.playerRapidsStartingVelocity += this.playerRapidsStartingVelocityIncrese;
-    console.log(this.playerRapidsStartingVelocity);
+    if (debug) {
+      console.log("Score: " + this.playerRapidsStartingVelocity);
+    }
     
     // Generates a new set of rapids
     this.status['location'] = 'rapids';
@@ -556,13 +570,15 @@ LeafGame.Play.prototype = {
     this.painter.emitter.height = 1;
     this.painter.emitter.on = true;
     
-    // Start timer
+    // Start timer to rapids
     this.status.startTimer.add(Math.max(this.startTimerLength - this.status.rapidsCleared, 0) * 1000, function() {
+      // Called when timer done
+      
       // Remove text
       this.leafText.setText('');
       this.leafNumber.setText('');
       
-      // Stop the timer when done
+      // Stop the timer
       this.status.startTimer.stop();
       
       // Slow water particle emitter
@@ -575,6 +591,8 @@ LeafGame.Play.prototype = {
   },
   newCalm: function() {
     // Generates a new calm set of water
+    
+    // Init
     this.status['location'] = 'calm';
     this.resetWater();
     
@@ -584,6 +602,10 @@ LeafGame.Play.prototype = {
     // Reset PC
     this.leaf.y = this.world.height - (this.leaf.height / 2);
   },
+  
+  
+  /*  Main game loop  */
+  
   update: function() {
     // If off top
     if (this.leaf.y < -this.leaf.height
@@ -635,7 +657,7 @@ LeafGame.Play.prototype = {
     
     // Paint player to the background
     this.painter.paintCircle(this.leaf.x + this.leaf.width / 2, this.leaf.y + this.leaf.height / 2, this.leaf.width / 2,
-                   this.leafPaintColor.rgba);
+                             leafPaintColor.rgba);
     
     // Move player sprite
     this.setWaterAcceleration(this.leaf);
@@ -660,16 +682,6 @@ LeafGame.Play.prototype = {
       this.toMenu();
     }
   },
-  toMenu: function() {
-    // Back to the main menu
-    highScore = Math.max(highScore, this.status.rapidsCleared);
-    
-    // Stop audio
-    this.riverFX.stop();
-    this.bgMusic.pause(); // Pause so we can resume from same place
-    
-    this.state.start('Menu');
-  },
   render: function() {
     if (debug) {
       // show debug examples
@@ -684,6 +696,22 @@ LeafGame.Play.prototype = {
         game.debug.body(rock);
       });
     }
+  },
+  
+  
+  /*  Helpers  */
+  
+  toMenu: function() {
+    // Back to the main menu
+    
+    // Update score
+    highScore = Math.max(highScore, this.status.rapidsCleared);
+    
+    // Stop audio
+    this.riverFX.stop();
+    this.bgMusic.pause(); // Pause so we can resume from same place
+    
+    this.state.start('Menu');
   },
   createRock(x, y) {
     // Creates a rock obstacle
@@ -731,6 +759,9 @@ LeafGame.Play.prototype = {
     this.painter.resetEmitter();
   }
 };
+
+
+/*  Start the game!  */
 
 game.state.add('Boot', LeafGame.Boot);
 game.state.add('Preloader', LeafGame.Preloader);
