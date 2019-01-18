@@ -246,7 +246,7 @@ LeafGame.Preloader.prototype = {
 // Main menu
 LeafGame.Menu = function() {
   // References
-  this.inputSpace = null;
+  this.inputNext = null;
   this.bg = null;
   this.playerTrail = null;
   this.leaf = null;
@@ -315,7 +315,7 @@ LeafGame.Menu.prototype = {
     this.text[3].setTextBounds(0, Helper.getTextYBottom(this.text[2]), this.world.width);
     
     // Input
-    this.inputSpace = this.input.keyboard.addKey(Phaser.KeyCode.ENTER);
+    this.inputNext = this.input.keyboard.addKey(Phaser.KeyCode.ENTER);
     
     // Audio
     this.dropFX = this.add.audio('drop');
@@ -357,7 +357,7 @@ LeafGame.Menu.prototype = {
     }, this);
     
     // Switch states when button is pressed
-    if (this.inputSpace.justPressed()) {
+    if (this.inputNext.justPressed()) {
       if (!this.transitionStarted) {
         // Start transition
         this.transitionStarted = true;
@@ -407,7 +407,7 @@ LeafGame.Play = function() {
   this.leafNumber = null;
   // Input
   this.cursors = null;
-  this.inputSpace = null;
+  this.inputNext = null;
   // Audio
   this.bgMusic = null;
   this.bgMusic = null;
@@ -512,7 +512,7 @@ LeafGame.Play.prototype = {
     
     // Input
     this.cursors = this.input.keyboard.createCursorKeys();
-    this.inputSpace = this.input.keyboard.addKey(Phaser.KeyCode.ENTER);
+    this.inputNext = this.input.keyboard.addKey(Phaser.KeyCode.ENTER);
     
     // Generate first set of water
     if (highScore > 0) {
@@ -603,8 +603,8 @@ LeafGame.Play.prototype = {
       this.toMenu();
     }
     
-    // Press space to skip rapids timer
-    if (this.inputSpace.justPressed() && this.status.startTimer.running) {
+    // Press next to skip rapids timer
+    if (this.inputNext.justPressed() && this.status.startTimer.running) {
       if (this.status.location == 'rapids') {
         // Get the timer event and call its callback
         this.status.startTimer.events[0].callback.call(this.status.startTimer.events[0].callbackContext);
