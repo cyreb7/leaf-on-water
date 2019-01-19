@@ -9,7 +9,7 @@ var rng = new Phaser.RandomDataGenerator();
 var audio = null;
 var audioBG = null;
 // Settings
-var debug = false; //True to show debugging info
+var debug = (debug === undefined) ? false : debug; //True to show debugging info
 var playerMaxVelocity = 200;
 var highScore = 0;
 var leafPaintColor = Phaser.Color.hexToColor('95b6ea');
@@ -202,6 +202,11 @@ LeafGame.Boot.prototype = {
     this.load.image('bar', 'bar.png');
   },
   create: function() {
+    // enable FPS monitoring
+    if (debug) {
+      game.time.advancedTiming = true;
+    }
+    
     this.state.start('Preloader');
   }
 }
@@ -467,11 +472,6 @@ LeafGame.Play.prototype = {
     this.status.startTimer = this.time.create(false);
     this.status.rapidsCleared = 0;
     this.status.windAcceleration = 0
-    
-    // enable FPS monitoring
-    if (debug) {
-      game.time.advancedTiming = true;
-    }
     
     // Create ParticlePainter
     this.painter = new ParticlePainter;
