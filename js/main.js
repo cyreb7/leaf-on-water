@@ -435,8 +435,8 @@ LeafGame.Play = function() {
   // Player
   this.playerAcceleration = this.maxWaterAcceleration * 0.75;
   this.playerMaxVelocity = playerMaxVelocity;
-  this.playerRapidsStartingVelocityIncrese = 10;
-  this.playerRapidsStartingVelocity;
+  this.playerRapidsVelocityIncrese = 10;
+  this.playerRapidsVelocity;
   // General
   this.startTimerLength = 5; //In seconds
   this.numberOfRocks = 7;
@@ -460,7 +460,7 @@ LeafGame.Play.prototype = {
     console.log('Play: create');
     
     // Settings
-    this.playerRapidsStartingVelocity = 65 - this.playerRapidsStartingVelocityIncrese;
+    this.playerRapidsVelocity = 65 - this.playerRapidsVelocityIncrese;
     
     // Initialize settings
     if (highScore == 0) {
@@ -536,9 +536,9 @@ LeafGame.Play.prototype = {
     // Changes board state to rapids
     
     // Make speed faster
-    this.playerRapidsStartingVelocity += this.playerRapidsStartingVelocityIncrese;
+    this.playerRapidsVelocity += this.playerRapidsVelocityIncrese;
     if (debug) {
-      console.log("Score: " + this.playerRapidsStartingVelocity);
+      console.log("Score: " + this.playerRapidsVelocity);
     }
     
     // Generates a new set of rapids
@@ -585,7 +585,7 @@ LeafGame.Play.prototype = {
       this.painter.emitter.frequency = this.painter.waterParticleFrequency * 5;
       
       // Give the player some starting momentum
-      this.leaf.body.velocity.y = -this.playerRapidsStartingVelocity;
+      this.leaf.body.velocity.y = -this.playerRapidsVelocity;
     }, this);
     this.status.startTimer.start();
   },
@@ -663,14 +663,14 @@ LeafGame.Play.prototype = {
     this.setWaterAcceleration(this.leaf);
     this.setMaxSpeed(this.leaf, this.playerMaxVelocity);
     
-    // Update leaf indicator
+    // Update time left before rapids
     if (this.status.startTimer.running
           && this.status.location == 'rapids') {
       // Force leaf off screen
       this.leaf.x = Helper.relativeX(0.5);
       this.leaf.y = this.world.height;
       
-      // Show timer text
+      // Update timer text
       var remaining = Math.round(this.status.startTimer.duration / 1000);
       this.leafText.setText('Approaching rapids');
       this.leafNumber.setText(remaining);
